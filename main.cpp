@@ -42,12 +42,16 @@ int main()
 
     passwd_field->placeholder = "Password";
 
+    std::optional<TimerId> msg_timer;
+
     auto btn = std::make_shared<Button>("Submit", [
-        user_field,
-        username_label,
-        passwd_field,
-        password_label,
-        info_label,
+        &user_field,
+        &username_label,
+        &passwd_field,
+        &password_label,
+        &info_label,
+        &app,
+        &msg_timer,
         &real_password
     ]()
     {
@@ -82,6 +86,17 @@ int main()
         {
             info_label->set_text("Account created!");
 
+            if (msg_timer.has_value())
+            {
+                app.remove_timer(msg_timer.value());
+            }
+
+            msg_timer = app.add_timer(1000, [info_label, &msg_timer]()
+            {
+                info_label->set_text("");
+                msg_timer.reset();
+            });
+
             user_field->set_value("");
             passwd_field->set_value("");
             real_password = "";
@@ -112,7 +127,6 @@ int main()
             real_password = "";
             return;
         }
-
 
         std::string display_passwd = passwd_field->get_value();
         
