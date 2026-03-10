@@ -1,6 +1,8 @@
 #include <string>
 #include <regex>
 #include <algorithm>
+#include <fstream>
+#include <functional>
 
 #include "cpptui.hpp"
 
@@ -17,6 +19,22 @@ bool is_valid(const std::string& field_input, size_t min_length)
 
     // Passed validation
     return true;
+}
+
+bool write_to_file(const std::string& filename, const size_t& entry)
+{
+    std::ofstream file(filename, std::ios::app);
+
+    if (file.is_open())
+    {
+        file << entry << std::endl;
+        file.close();
+
+        return true;
+    }
+
+    // File did not open correctly
+    return false;
 }
 
 int main()
@@ -84,7 +102,21 @@ int main()
 
         if (user_is_valid && pass_is_valid)
         {
-            info_label->set_text("Account created!");
+            // Write to file
+
+            std::string filename = "accounts.txt";
+            std::string entry = username + ":" + password;
+
+            std::size_t hashValue = std::hash<std::string>{}(entry);
+            
+            if (write_to_file(filename, hashValue))
+            {
+                info_label->set_text("Account created!");
+            }
+            else
+            {
+                info_label->set_text("There was a problem creating your account!");
+            }
 
             if (msg_timer.has_value())
             {
