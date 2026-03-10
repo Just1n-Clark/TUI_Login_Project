@@ -1,5 +1,6 @@
 #include <string>
 #include <regex>
+#include <algorithm>
 
 #include "cpptui.hpp"
 
@@ -23,59 +24,67 @@ int main()
     Theme::set_theme(Theme::TokyoNight());
 
     App app;
+
+    std::string real_password;
+
+    // Widgets
     auto root = std::make_shared<Vertical>();
 
     auto header_label = std::make_shared<Label>("Justin's Login System (q to quit)");
     auto username_label = std::make_shared<Label>("");
     auto password_label = std::make_shared<Label>("");
+    auto info_label = std::make_shared<Label>("");
 
     auto user_field = std::make_shared<Input>();
     user_field->placeholder = "Username";
 
     auto passwd_field = std::make_shared<Input>();
+
     passwd_field->placeholder = "Password";
 
     auto btn = std::make_shared<Button>("Submit", [
         user_field,
         username_label,
         passwd_field,
-        password_label
+        password_label,
+        info_label,
+        &real_password
     ]()
     {
         std::string username = user_field->get_value();
-        bool successful_login;
-
+        bool user_is_valid;
+        bool pass_is_valid;
         if (is_valid(username, 5))
         {
-            successful_login = true;
+            user_is_valid = true;
             username_label->set_text("");
         }
         else
         {
             username_label->set_text("Username invalid!");
-            successful_login = false;
+            user_is_valid = false;
         }
 
-        std::string password = passwd_field->get_value();
+        std::string password = real_password;
 
         if (is_valid(password, 8))
         {
-            successful_login = true;
+            pass_is_valid = true;
             password_label->set_text("");
         }
         else
         {
             password_label->set_text("Password invalid!");
-            successful_login = false;
+            pass_is_valid = false;
         }
 
-        if (successful_login)
+        if (user_is_valid && pass_is_valid)
         {
-            username_label->set_text(username);
-            password_label->set_text(password);
+            info_label->set_text("Account created!");
 
             user_field->set_value("");
             passwd_field->set_value("");
+            real_password = "";
         }
     });
 
@@ -90,8 +99,39 @@ int main()
     root->add(passwd_field);
 
     root->add(std::make_shared<VerticalSpacer>(1));
+    root->add(info_label);
+
+    root->add(std::make_shared<VerticalSpacer>(1));
     root->add(btn);
     root->add(std::make_shared<VerticalSpacer>(1));
+
+    passwd_field->on_change = [&real_password, passwd_field](std::string current_val)
+    {
+        if (current_val.empty())
+        {
+            real_password = "";
+            return;
+        }
+
+
+        std::string display_passwd = passwd_field->get_value();
+        
+        size_t current_stars = std::count(current_val.begin(), current_val.end(), '*');
+        size_t display_stars = std::count(display_passwd.begin(), display_passwd.end(), '*');
+        
+        if (current_val.length() > real_password.length())
+        {
+            real_password += current_val.back();
+        }
+        else if (current_val.length() < real_password.length())
+        {
+            real_password.pop_back();
+        }
+
+        std::string stars = std::string(real_password.length(), '*');
+
+        if (current_val != stars) { passwd_field->set_value(stars); }
+    };
 
     app.run(root);
     return 0;
