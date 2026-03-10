@@ -5,13 +5,11 @@
 
 using namespace cpptui;
 
-bool is_valid(const std::string& field_input)
-{
-    // if (field_input.empty()) return false;
-    
+bool is_valid(const std::string& field_input, size_t min_length)
+{   
     std::regex pattern(R"(^[\w]+$)");
 
-    if (!std::regex_search(field_input, pattern))
+    if (!std::regex_search(field_input, pattern) || field_input.length() < min_length)
     {
         return false;
     }
@@ -45,25 +43,39 @@ int main()
     ]()
     {
         std::string username = user_field->get_value();
-        
-        if (is_valid(username))
+        bool successful_login;
+
+        if (is_valid(username, 5))
         {
-            username_label->set_text(username);
+            successful_login = true;
+            username_label->set_text("");
         }
         else
         {
             username_label->set_text("Username invalid!");
+            successful_login = false;
         }
 
         std::string password = passwd_field->get_value();
 
-        if (is_valid(password))
+        if (is_valid(password, 8))
         {
-            password_label->set_text(password);
+            successful_login = true;
+            password_label->set_text("");
         }
         else
         {
             password_label->set_text("Password invalid!");
+            successful_login = false;
+        }
+
+        if (successful_login)
+        {
+            username_label->set_text(username);
+            password_label->set_text(password);
+
+            user_field->set_value("");
+            passwd_field->set_value("");
         }
     });
 
