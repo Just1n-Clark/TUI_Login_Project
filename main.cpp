@@ -1,10 +1,23 @@
+#include <string>
+#include <regex>
+
 #include "cpptui.hpp"
+
 using namespace cpptui;
 
-bool is_valid()
+bool is_valid(const std::string& field_input)
 {
+    // if (field_input.empty()) return false;
     
-    return false;
+    std::regex pattern(R"(^[\w]+$)");
+
+    if (!std::regex_search(field_input, pattern))
+    {
+        return false;
+    }
+
+    // Passed validation
+    return true;
 }
 
 int main()
@@ -15,8 +28,8 @@ int main()
     auto root = std::make_shared<Vertical>();
 
     auto header_label = std::make_shared<Label>("Justin's Login System (q to quit)");
-    auto username_label = std::make_shared<Label>("---");
-    auto password_label = std::make_shared<Label>("---");
+    auto username_label = std::make_shared<Label>("");
+    auto password_label = std::make_shared<Label>("");
 
     auto user_field = std::make_shared<Input>();
     user_field->placeholder = "Username";
@@ -31,8 +44,27 @@ int main()
         password_label
     ]()
     {
-        username_label->set_text(user_field->get_value());
-        password_label->set_text(passwd_field->get_value());
+        std::string username = user_field->get_value();
+        
+        if (is_valid(username))
+        {
+            username_label->set_text(username);
+        }
+        else
+        {
+            username_label->set_text("Username invalid!");
+        }
+
+        std::string password = passwd_field->get_value();
+
+        if (is_valid(password))
+        {
+            password_label->set_text(password);
+        }
+        else
+        {
+            password_label->set_text("Password invalid!");
+        }
     });
 
     app.register_exit_key('q');
