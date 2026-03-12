@@ -1,12 +1,28 @@
+/**
+ * Justin Clark
+ * Created 03/09/26
+ * NOTE: Compile with flag -std=c++20 for std::format to work
+ */
+
 #include <string>
 #include <regex>
 #include <algorithm>
 #include <fstream>
 #include <functional>
+#include <format>
+#include <iostream>
+#include <sstream>
 
 #include "cpptui.hpp"
 
 using namespace cpptui;
+
+enum class AccountStatus
+{
+    Success,
+    Partial,
+    Fail
+};
 
 bool is_valid(const std::string& field_input, size_t min_length)
 {   
@@ -21,20 +37,78 @@ bool is_valid(const std::string& field_input, size_t min_length)
     return true;
 }
 
-bool write_to_file(const std::string& filename, const size_t& entry)
+/**
+ * @brief Writes hashes to file using specified format
+ * @param filename filename to write to
+ * @param username hashed username
+ * @param password hashed password
+ * @return result of successful operation (true/false)
+ */
+bool write_to_file(
+    const std::string& filename,
+    const size_t& username,
+    const size_t& password
+)
 {
     std::ofstream file(filename, std::ios::app);
 
-    if (file.is_open())
+    if (!file.is_open())
     {
-        file << entry << std::endl;
-        file.close();
-
-        return true;
+        // File did not open properly
+        return false;
     }
 
-    // File did not open correctly
-    return false;
+    // Format == user:pass\n
+    file << username << ":" << password << std::endl;
+    file.close();
+
+    return true;
+}
+
+/**
+ * @brief validate account existence
+ * @param filename filename to check against
+ * @param user_hash hashed username
+ * @param pass_hash hashed password
+ * @return AccountStatus enum, { Success, Partial, Fail }
+ */
+AccountStatus check_account(
+    const std::string& filename,
+    std::size_t& user_hash,
+    std::size_t& pass_hash
+)
+{
+    std::ifstream file(filename);
+
+    if (!file.is_open())
+    {
+        return AccountStatus::Fail;
+    }
+
+    std::string file_entry;
+
+    while (std::getline(file, file_entry))
+    {
+        std::istringstream ss(file_entry);
+        std::string user;
+        std::string pass;
+
+        std::getline(ss, user, ':');
+        std::getline(ss, pass);
+
+        if (stoul(user) == user_hash)
+        {
+            if (stoul(pass) == pass_hash)
+            {
+                return AccountStatus::Success;
+            }
+            return AccountStatus::Partial;
+        }
+    }
+
+    file.close();
+
+    return AccountStatus::Fail;
 }
 
 int main()
@@ -102,20 +176,23 @@ int main()
 
         if (user_is_valid && pass_is_valid)
         {
-            // Write to file
-
+            // Preliminary setup            
             std::string filename = "accounts.txt";
-            std::string entry = username + ":" + password;
-
-            std::size_t hashValue = std::hash<std::string>{}(entry);
+            std::size_t username_hash = std::hash<std::string>{}(username);
+            std::size_t password_hash = std::hash<std::string>{}(password);
             
-            if (write_to_file(filename, hashValue))
+            switch (check_account(filename, username_hash, password_hash))
             {
-                info_label->set_text("Account created!");
-            }
-            else
-            {
-                info_label->set_text("There was a problem creating your account!");
+                // Success
+                case AccountStatus::Success:
+                    info_label->set_text(std::format("Welcome {}!", username));
+                    break;
+                case AccountStatus::Partial:
+                    info_label->set_text("Incorrect username or password");
+                    break;
+                case AccountStatus::Fail:
+                    info_label->set_text(std::format("Account not found, created account for user {}", username));
+                    write_to_file(filename, username_hash, password_hash);
             }
 
             if (msg_timer.has_value())
@@ -123,7 +200,7 @@ int main()
                 app.remove_timer(msg_timer.value());
             }
 
-            msg_timer = app.add_timer(1000, [info_label, &msg_timer]()
+            msg_timer = app.add_timer(3000, [info_label, &msg_timer]()
             {
                 info_label->set_text("");
                 msg_timer.reset();
